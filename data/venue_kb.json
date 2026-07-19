@@ -1,0 +1,23 @@
+{
+  "venue": "Demo Stadium",
+  "zones": [
+    {"id": "Z1", "name": "Gate A - North Concourse", "type": "gate", "capacity": 4000,
+     "amenities": ["restroom", "concession", "accessible_entry"]},
+    {"id": "Z2", "name": "Gate B - East Concourse", "type": "gate", "capacity": 3500,
+     "amenities": ["restroom", "concession"]},
+    {"id": "Z3", "name": "Gate C - South Concourse", "type": "gate", "capacity": 3000,
+     "amenities": ["restroom", "first_aid"]},
+    {"id": "Z4", "name": "Gate D - West Concourse", "type": "gate", "capacity": 4200,
+     "amenities": ["restroom", "concession", "accessible_entry"]},
+    {"id": "Z5", "name": "Section 100-120 Seating Bowl", "type": "seating", "capacity": 12000,
+     "amenities": ["restroom", "wheelchair_seating"]}
+  ],
+  "accessible_routes": [
+    {"from": "Gate A", "to": "Section 100-120", "path": ["Z1", "ramp_A2", "Z5"], "wheelchair_safe": true},
+    {"from": "Gate D", "to": "Section 100-120", "path": ["Z4", "ramp_D1", "Z5"], "wheelchair_safe": true}
+  ],
+  "transit_points": [
+    {"id": "T1", "name": "Metro Station North", "linked_gate": "Z1"},
+    {"id": "T2", "name": "Bus Terminal East", "linked_gate": "Z2"}
+  ]
+}

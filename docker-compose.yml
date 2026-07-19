@@ -1,0 +1,84 @@
+services:
+  postgres:
+    image: ankane/pgvector:latest
+    environment:
+      POSTGRES_USER: stadium
+      POSTGRES_PASSWORD: stadium
+      POSTGRES_DB: stadiumpulse
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./infra/init_db.sql:/docker-entrypoint-initdb.d/init_db.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U stadium"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  seed:
+    build:
+      context: .
+      dockerfile: backend/orchestrator/Dockerfile
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://stadium:stadium@postgres:5432/stadiumpulse
+      SEED_STAFF_USERNAME: ${SEED_STAFF_USERNAME:-staff}
+      SEED_STAFF_PASSWORD: ${SEED_STAFF_PASSWORD:-demo}
+    command: ["python", "-m", "backend.shared.seed"]
+
+  navigator:
+    build:
+      context: .
+      dockerfile: backend/navigator/Dockerfile
+    depends_on:
+      seed:
+        condition: service_completed_successfully
+    environment:
+      DATABASE_URL: postgresql://stadium:stadium@postgres:5432/stadiumpulse
+      NVIDIA_NIM_API_KEY: ${NVIDIA_NIM_API_KEY:-}
+      NIM_CHAT_MODEL: ${NIM_CHAT_MODEL:-meta/llama-3.1-8b-instruct}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:5173,http://localhost:5174}
+      RATE_LIMIT_PER_MINUTE: ${RATE_LIMIT_PER_MINUTE:-30}
+      ENVIRONMENT: ${ENVIRONMENT:-development}
+    ports:
+      - "8001:8001"
+
+  orchestrator:
+    build:
+      context: .
+      dockerfile: backend/orchestrator/Dockerfile
+    depends_on:
+      seed:
+        condition: service_completed_successfully
+    environment:
+      DATABASE_URL: postgresql://stadium:stadium@postgres:5432/stadiumpulse
+      NVIDIA_NIM_API_KEY: ${NVIDIA_NIM_API_KEY:-}
+      NIM_CHAT_MODEL: ${NIM_CHAT_MODEL:-meta/llama-3.1-8b-instruct}
+      JWT_SECRET: ${JWT_SECRET:-dev-secret-change-in-prod}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:5173,http://localhost:5174}
+      RATE_LIMIT_PER_MINUTE: ${RATE_LIMIT_PER_MINUTE:-30}
+      ENVIRONMENT: ${ENVIRONMENT:-development}
+    ports:
+      - "8002:8002"
+
+  fan-ui:
+    build:
+      context: ./frontend/fan-ui
+    environment:
+      VITE_NAVIGATOR_URL: http://localhost:8001
+    ports:
+      - "5173:5173"
+
+  ops-ui:
+    build:
+      context: ./frontend/ops-ui
+    environment:
+      VITE_ORCHESTRATOR_URL: http://localhost:8002
+    ports:
+      - "5174:5174"
+
+volumes:
+  pgdata:

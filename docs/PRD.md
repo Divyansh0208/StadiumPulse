@@ -3,8 +3,10 @@
 **Challenge:** PromptWars Virtual — Challenge 4: Smart Stadiums & Tournament Operations
 **Event context:** FIFA World Cup 2026
 
-*(corrected: added explicit zero-cost constraint; see §8. No other section changed —
-original scope/goals/features were already vendor-agnostic.)*
+*(corrected: added explicit zero-cost constraint, see §8. Also updated §4.2 and
+§7 to reflect final build status — dispatch is implemented and tested but not
+yet exposed as a UI panel; see below. No other section changed — original
+scope/goals/features were already vendor-agnostic.)*
 
 ---
 
@@ -38,7 +40,9 @@ StadiumPulse solves both with one GenAI core: a multi-agent orchestrator for sta
 ### 4.1 Fan Navigator (fan-facing)
 - Chat + voice interface, auto-detects/switches language (NIM translation).
 - RAG over venue data: gates, seating map, amenities, exits, accessibility routes.
-- Live crowd heatmap overlay per zone.
+- Live crowd heatmap overlay per zone — implemented as an interactive SVG
+  stadium map (gate-level zones, color-coded by live density, tied to chat
+  answers).
 - Transit ETA to next kickoff / from current location.
 - Accessibility mode: wheelchair-routing, screen-reader-optimized responses, larger-touch-target UI.
 
@@ -47,20 +51,28 @@ StadiumPulse solves both with one GenAI core: a multi-agent orchestrator for sta
   - Crowd density agent (simulated sensor/CV feed)
   - Transport delay agent
   - Incident report agent (volunteer/staff submitted)
-- Orchestrator step correlates signals deterministically → GenAI generates only the human-readable recommended-action text, ranked by a deterministic severity score.
-- Dispatch sub-system: deterministic + GenAI hybrid ranking of nearest/best-fit available volunteer (reuse of prior ranking methodology).
-- Live dashboard: zone map, active incidents, recommended actions queue, one-click "dispatch."
-
-### 4.3 Shared layer
-- Single venue knowledge base (RAG store) feeds both Navigator and Orchestrator.
-- WebSocket/SSE push for real-time updates on both sides.
+- Orchestrator step correlates signals deterministically → GenAI generates only
+  the human-readable recommended-action text, ranked by a deterministic
+  severity score. Severity is scored per signal type independently (each on
+  its own 0–10 scale), then takes the worst single signal as the base score
+  — this ensures one critical signal (e.g. extreme crowd density alone) can
+  still surface as high severity, rather than being diluted by a fixed-weight
+  sum across signal types.
+- Dispatch sub-system: deterministic + GenAI hybrid ranking of nearest/best-fit
+  available volunteer (reuse of prior ranking methodology). **Status: backend
+  endpoints (`/dispatch/rank`, `/dispatch/{volunteer_id}`) implemented and
+  unit-tested; not yet wired into the Ops dashboard UI as a one-click panel —
+  usable today via the API docs.**
+- Live dashboard: zone map, active incidents, recommended actions queue.
+  One-click "dispatch" from the dashboard itself is the remaining piece (see
+  above) — currently a next-step, not yet in the shipped UI.
 
 ## 5. User Stories
 
 - As a fan, I ask "where's the nearest accessible restroom" in Spanish and get a routed answer in Spanish.
 - As a fan, I ask "is Gate B crowded" and see a live heatmap + suggested alternate gate.
 - As ops staff, I see a correlated alert: "Zone 3 density 89% + 12-min transit delay → recommend early gate opening, dispatch 3 volunteers" instead of three separate raw alerts.
-- As a volunteer, I get pushed a dispatch with location + task, ranked as best-fit by proximity + skill tag.
+- As a volunteer, I get pushed a dispatch with location + task, ranked as best-fit by proximity + skill tag. *(Ranking logic ships and is tested; the push/UI surfacing is the open next-step noted in §4.2.)*
 
 ## 6. Success Metrics (demo-measurable)
 
@@ -70,7 +82,9 @@ StadiumPulse solves both with one GenAI core: a multi-agent orchestrator for sta
 
 ## 7. Scope
 
-**In scope (hackathon window):** Navigator chat UI, Orchestrator dashboard, 3 agent types, simulated live data feeds, RAG venue KB, dispatch ranker.
+**In scope (hackathon window):** Navigator chat UI + interactive stadium map,
+Orchestrator dashboard, 3 agent types, simulated live data feeds, RAG venue KB,
+dispatch ranker (API-level; UI panel not yet built).
 
 **Out of scope:** Real sensor/CV hardware integration, production auth/SSO, real transit API integration (mock/stub instead), multi-stadium scaling.
 
